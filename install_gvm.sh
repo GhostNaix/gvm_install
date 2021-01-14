@@ -28,16 +28,17 @@ fi
 
 #GVMVERSION='11'
 
-apt-get update
-apt-get upgrade
+apt update
+apt upgrade -y
 useradd -r -d /opt/gvm -c "GVM (OpenVAS) User" -s /bin/bash gvm
 mkdir /opt/gvm
 chown gvm:gvm /opt/gvm
-apt-get -y install gcc g++ make bison flex libksba-dev curl redis libpcap-dev cmake git pkg-config libglib2.0-dev libgpgme-dev libgnutls28-dev uuid-dev libssh-gcrypt-dev libldap2-dev gnutls-bin libmicrohttpd-dev libhiredis-dev zlib1g-dev libxml2-dev libradcli-dev clang-format libldap2-dev doxygen nmap gcc-mingw-w64 xml-twig-tools libical-dev perl-base heimdal-dev libpopt-dev libsnmp-dev python3-setuptools python3-paramiko python3-lxml python3-defusedxml python3-dev gettext python3-polib xmltoman python3-pip texlive-fonts-recommended xsltproc texlive-latex-extra rsync ufw ntp git --no-install-recommends
+apt -y install gcc g++ make bison flex libksba-dev curl redis libpcap-dev cmake git pkg-config libglib2.0-dev libgpgme-dev libgnutls28-dev uuid-dev libssh-gcrypt-dev libldap2-dev gnutls-bin libmicrohttpd-dev libhiredis-dev zlib1g-dev libxml2-dev libradcli-dev clang-format libldap2-dev doxygen nmap gcc-mingw-w64 xml-twig-tools libical-dev perl-base heimdal-dev libpopt-dev libsnmp-dev python3-setuptools python3-paramiko python3-lxml python3-defusedxml python3-dev gettext python3-polib xmltoman python3-pip texlive-fonts-recommended xsltproc texlive-latex-extra rsync ntp git --no-install-recommends
+#apt -y ufw
 curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add -
 echo "deb https://dl.yarnpkg.com/debian/ stable main" | tee /etc/apt/sources.list.d/yarn.list
-apt-get update
-apt-get -y install yarn
+apt update
+apt -y install yarn
 
 # addresses issue #7 on GH
 /usr/bin/yarn install
@@ -249,8 +250,8 @@ sudo -Hiu gvm echo "echo More info can be found by searching greenbone-nvt-sync 
 
 if [ $GVMVERSION = "11" ]; then
     sudo -Hiu gvm echo "/opt/gvm/sbin/greenbone-scapdata-sync" | sudo -Hiu gvm tee -a /opt/gvm/feed.sh
-elif [ $GVMVERSION = "20" ]; then
-    sudo -Hiu gvm echo "/opt/gvm/sbin/greenbone-feed-sync --type SCAP" | sudo -Hiu gvm tee -a /opt/gvm/feed.sh
+#elif [ $GVMVERSION = "20" ]; then
+    #sudo -Hiu gvm echo "/opt/gvm/sbin/greenbone-feed-sync --type SCAP" | sudo -Hiu gvm tee -a /opt/gvm/feed.sh
 fi
 
 sudo -Hiu gvm echo "echo Sleeping 5 minutes" | sudo -Hiu gvm tee -a /opt/gvm/feed.sh
@@ -261,63 +262,26 @@ sudo -Hiu gvm echo "sleep 300" | sudo -Hiu gvm tee -a /opt/gvm/feed.sh # allow a
 if [ $GVMVERSION = "11" ]; then
     sudo -Hiu gvm echo "sed -i '349isleep 300' /opt/gvm/sbin/greenbone-certdata-sync" | sudo -Hiu gvm tee -a /opt/gvm/feed.sh
     sudo -Hiu gvm echo "/opt/gvm/sbin/greenbone-certdata-sync" | sudo -Hiu gvm tee -a /opt/gvm/feed.sh
-#elif [ $GVMVERSION = "20" ]; then
+elif [ $GVMVERSION = "20" ]; then
     # according to the reporter in Issue12 this is what's needed however, it seems unlikely to me that inserting the sleep statement into line 349 of
     # /opt/gvm/greenbone-feed-sync is the same as inserting it into line 349 of greenbone-certdata-sync in version 11
     # same goes for the sed statement above.
     #sudo -Hiu gvm echo "sed -i '349isleep 300' /opt/gvm/sbin/greenbone-feed-sync --type CERT" | sudo -Hiu gvm tee -a /opt/gvm/feed.sh
-    sudo -Hiu gvm echo "/opt/gvm/sbin/greenbone-feed-sync --type GVMD_DATA" | sudo -Hiu gvm tee -a /opt/gvm/feed.sh
+    sudo -Hiu gvm /opt/gvm/sbin/greenbone-feed-sync --type GVMD_DATA
+    echo "Sleeping for 300 seconds"
+    sleep 300
+    sudo -Hiu gvm /opt/gvm/sbin/greenbone-feed-sync --type SCAP
+    echo "Sleeping for 300 seconds"
+    sleep 300
+    sudo -Hiu gvm /opt/gvm/sbin/greenbone-feed-sync --type CERT
+    sleep 30
+    sudo -Hiu gvm /opt/gvm/bin/gvm-manage-certs -a
 fi
-
-su gvm -c "/opt/gvm/feed.sh"
-su gvm -c "rm /opt/gvm/feed.sh"
-
-# Set cron jobs to run once daily at random times
-su gvm -c "touch /opt/gvm/cron.sh"
-su gvm -c "chmod u+x /opt/gvm/cron.sh"
-
-HOUR=$(shuf -i 0-23 -n 1)
-MINUTE=$(shuf -i 0-59 -n 1)
+s
 if [ $GVMVERSION = "11" ]; then
-    sudo -Hiu gvm echo "(crontab -l 2>/dev/null; echo \"${MINUTE} ${HOUR} * * * /opt/gvm/sbin/greenbone-scapdata-sync\") | crontab -" | sudo -Hiu gvm tee -a /opt/gvm/cron.sh
-elif [ $GVMVERSION = "20" ]; then
-    sudo -Hiu gvm echo "(crontab -l 2>/dev/null; echo \"${MINUTE} ${HOUR} * * * /opt/gvm/sbin/greenbone-feed-sync --type SCAP\") | crontab -" | sudo -Hiu gvm tee -a /opt/gvm/cron.sh
+    su gvm -c "/opt/gvm/feed.sh"
+    su gvm -c "rm /opt/gvm/feed.sh"
 fi
-
-HOUR=$(shuf -i 0-23 -n 1)
-MINUTE=$(shuf -i 0-59 -n 1)
-if [ $GVMVERSION = "11" ]; then
-    sudo -Hiu gvm echo "(crontab -l 2>/dev/null; echo \"${MINUTE} ${HOUR} * * * /opt/gvm/bin/greenbone-nvt-sync\") | crontab -" | sudo -Hiu gvm tee -a /opt/gvm/cron.sh
-elif [ $GVMVERSION = "20" ]; then
-    # I realise these are the same but I suspect they may need to be different.
-    sudo -Hiu gvm echo "(crontab -l 2>/dev/null; echo \"${MINUTE} ${HOUR} * * * /opt/gvm/bin/greenbone-nvt-sync\") | crontab -" | sudo -Hiu gvm tee -a /opt/gvm/cron.sh
-fi
-
-HOUR=$(shuf -i 0-23 -n 1)
-MINUTE=$(shuf -i 0-59 -n 1)
-if [ $GVMVERSION = "11" ]; then
-    sudo -Hiu gvm echo "(crontab -l 2>/dev/null; echo \"${MINUTE} ${HOUR} * * * /opt/gvm/sbin/greenbone-certdata-sync\") | crontab -" | sudo -Hiu gvm tee -a /opt/gvm/cron.sh
-elif [ $GVMVERSION = "20" ]; then
-    sudo -Hiu gvm echo "(crontab -l 2>/dev/null; echo \"${MINUTE} ${HOUR} * * * /opt/gvm/sbin/greenbone-feed-sync --type CERT\") | crontab -" | sudo -Hiu gvm tee -a /opt/gvm/cron.sh
-fi
-
-HOUR=$(shuf -i 0-23 -n 1)
-MINUTE=$(shuf -i 0-59 -n 1)
-if [ $GVMVERSION = "20" ]; then
-    sudo -Hiu gvm echo "(crontab -l 2>/dev/null; echo \"${MINUTE} ${HOUR} * * * /opt/gvm/sbin/greenbone-feed-sync --type GVMD_DATA\") | crontab -" | sudo -Hiu gvm tee -a /opt/gvm/cron.sh
-fi
-
-# I know this is kludgy as this should be run after the nvt sync but if it gets 
-# run once a day that should do
-HOUR=$(shuf -i 0-23 -n 1)
-MINUTE=$(shuf -i 0-59 -n 1)
-sudo -Hiu gvm echo "(crontab -l 2>/dev/null; echo \"${MINUTE} ${HOUR} * * * /usr/bin/sudo /opt/gvm/sbin/openvas --update-vt-info\") | crontab -" | sudo -Hiu gvm tee -a /opt/gvm/cron.sh
-
-# Configure certs
-sudo -Hiu gvm echo "/opt/gvm/bin/gvm-manage-certs -a" | sudo -Hiu gvm tee -a /opt/gvm/cron.sh
-
-su gvm -c "/opt/gvm/cron.sh"
-su gvm -c "rm /opt/gvm/cron.sh"
 
 # Build and Install OSPd and OSPd-OpenVAS
 su gvm -c "touch /opt/gvm/ospd.sh"
@@ -371,7 +335,7 @@ sudo -Hiu gvm echo "/usr/bin/python3 /opt/gvm/bin/ospd-openvas --pid-file /opt/g
 # Start GVM
 sudo -Hiu gvm echo "/opt/gvm/sbin/gvmd --osp-vt-update=/opt/gvm/var/run/ospd.sock" | sudo -Hiu gvm tee -a /opt/gvm/start.sh
 # Start GSA
-sudo -Hiu gvm echo "sudo /opt/gvm/sbin/gsad" | sudo -Hiu gvm tee -a /opt/gvm/start.sh
+sudo -Hiu gvm echo "sudo /opt/gvm/sbin/gsad --listen=0.0.0.0 --port=9392" | sudo -Hiu gvm tee -a /opt/gvm/start.sh
 
 # Wait a moment for the above to start up
 sudo -Hiu gvm echo "sleep 10" | sudo -Hiu gvm tee -a /opt/gvm/start.sh
@@ -400,7 +364,7 @@ sudo -Hiu gvm echo "sleep 10" | sudo -Hiu gvm tee -a /opt/gvm/scan.sh
 sudo -Hiu gvm echo -e "/opt/gvm/sbin/gvmd --verify-scanner=UUID" | sed 's/UUID/\$UUID/g' | sudo -Hiu gvm tee -a /opt/gvm/scan.sh
 
 # Create OpenVAS (GVM 11) Admin
-sudo -Hiu gvm echo -e "/opt/gvm/sbin/gvmd --create-user gvmadmin --password=StrongPass" | sudo -Hiu gvm tee -a /opt/gvm/scan.sh
+sudo -Hiu gvm echo -e "/opt/gvm/sbin/gvmd --create-user admin --password=etGLgDawHHrZcA8m" | sudo -Hiu gvm tee -a /opt/gvm/scan.sh
 
 if [ $GVMVERSION = "20" ]; then
     # Update feed sync GVMD_Data enable
@@ -415,9 +379,10 @@ su gvm -c "rm /opt/gvm/scan.sh"
 # the start of the above scripts. Not sure which is a better solution.
 
 # Set firewall to allow access on port 443 and 22
-ufw allow 443
-ufw allow 22
-ufw --force enable
+#ufw allow 443
+#ufw allow 22
+#ufw --force enable
+
 
 # Create systemd services for OpenVAS Scanner, GSA, and GVM services
 echo "[Unit]" > /etc/systemd/system/openvas.service
@@ -477,7 +442,7 @@ echo "User=gvm" >> /etc/systemd/system/gsa.service
 echo "Group=gvm" >> /etc/systemd/system/gsa.service
 echo "Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/opt/gvm/bin:/opt/gvm/sbin:/opt/gvm/.local/bin" >> /etc/systemd/system/gsa.service
 echo "Environment=PYTHONPATH=/opt/gvm/lib/python$PY3VER/site-packages" >> /etc/systemd/system/gsa.service
-echo -e "ExecStart=/usr/bin/sudo /opt/gvm/sbin/gsad" >> /etc/systemd/system/gsa.service
+echo -e "ExecStart=/usr/bin/sudo /opt/gvm/sbin/gsad --listen=0.0.0.0 --port=9392" >> /etc/systemd/system/gsa.service
 echo "RemainAfterExit=yes" >> /etc/systemd/system/gsa.service
 echo -e "\n" >> /etc/systemd/system/gsa.service
 echo "[Install]" >> /etc/systemd/system/gsa.service
@@ -498,7 +463,8 @@ systemctl daemon-reload
 systemctl enable --now openvas
 systemctl enable --now gvm.{path,service}
 systemctl enable --now gsa.{path,service}
-
+systemctl start openvas
+systemctl start gvm
 
 # REMIND USER TO CHANGE DEFAULT PASSWORD
 echo "The installation is done, but there may still be an update in progress."
@@ -509,11 +475,8 @@ if [ $GVMVERSION = "20" ]; then
     echo "I've had some trouble with version 20 when testing"
     echo "If you're unable to log in to the web interface try restarting"
     echo "and running all of the update commands in the gvm user's crontab"
-    echo "sudo su gvm -c \"crontab -l\""
-    echo "and ensure they complete successfully. Alternatively, leave the machine running"
-    echo "for 24 hours and let cron handle it."
-    echo ""
 fi
-echo "Username is gvmadmin and pasword is StrongPass"
+echo "Username is admin and pasword is etGLgDawHHrZcA8m"
 echo "Remember to change this default password"
-echo "sudo -Hiu gvm gvmd --user=gvmadmin --new-password=<PASSWORD>"
+echo "sudo -Hiu gvm gvmd --user=admin --new-password=<PASSWORD>"
+echo "It is recommended that you restart the machine after the install"

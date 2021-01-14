@@ -1,11 +1,21 @@
 # gvm_install
 A script to install GVM / OpenVAS 11 or 20 on Ubuntu 20.04
 
+## Note
+If you get an error at login during the login some where along the lines off `The Greenbone Vulnerability Manager service is not responding` reboot the host or start the restart the `gvm` service via:
+```
+service gvm start
+```
+or 
+```
+systemctl start gvm
+```
+
 Usage:
 
 Ubuntu:
 ```
-wget https://raw.githubusercontent.com/yu210148/gvm_install/master/install_gvm.sh
+wget https://raw.githubusercontent.com/GhostNaix/gvm_install/master/install_gvm.sh
 chmod +x install_gvm.sh
 sudo ./install_gvm.sh 
 ```
@@ -15,21 +25,18 @@ Debian:
 ```
 apt install sudo
 usermod -aG sudo <your-user-name> # add your user to the sudoer's group
-wget https://raw.githubusercontent.com/yu210148/gvm_install/master/install_gvm.sh
+wget https://raw.githubusercontent.com/GhostNaix/gvm_install/master/install_gvm.sh
 chmod +x install_gvm.sh
 sudo -i
 ./install_gvm.sh
 ```
 
 When the script completes if everything went well the web interface should be available on the machine you ran this on. 
-Locate the IP address `ip a` is one way to do that. Then, point a web browser to `https://<ip-address-of-machine>` where `<ip-address-of-machine>`
+Locate the IP address `ip a` is one way to do that. Then, point a web browser to `https://<ip-address-of-machine>:9392` where `<ip-address-of-machine>`
 is the actual address.
 
 It uses a self-signed certificate so you'll see a warning in the web browser about that. Feel free to replace the cert or ignore the warning.
 
-**********
-Seems, that after completing the script for version 20 the machine needs to be restarted. Then you should be able to log into the web interface. Once logged in, head over to Administration-->Feed Status. If any of the feeds show a status of 'Update in progress' wait until they're completed. While you're waiting, log in to a command prompt on the machine and become the GVM user (e.g., sudo -i, su gvm). List the gvm user's crontab file with 'crontab -l' and manually execute the commands shown there (e.g., '/opt/gvm/sbin/greenbone-feed-sync --type SCAP') once the feed status changes from 'Update in progress' to the feed's actual status. When you run the commands from the crontab the feed status update as shown in the web interface will change back to show that it's updating. Again, wait for it to complete before running the next line from the crontab. Once all the feeds are showing versions that look like dates (e.g., 20201229T1131) and the status is no longer showing as updating you should be able to start a scan using the OpenVAS Scanner under Scans-->Tasks-->New Task.
-*********
 
 Depending on how your network is set up--specifically, with regards to IPv4 and IPv6--you may run into issues accessing the web interface. See <a href=https://github.com/yu210148/gvm_install/issues/7>Issue #7</a> for more info. 
 
