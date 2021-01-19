@@ -474,7 +474,6 @@ if [ $GVMVERSION = "20" ]; then
     echo ""
     echo "I've had some trouble with version 20 when testing"
     echo "If you're unable to log in to the web interface try restarting"
-    echo "and running all of the update commands in the gvm user's crontab"
 fi
 echo "Username is admin and pasword is etGLgDawHHrZcA8m"
 echo "Remember to change this default password"
